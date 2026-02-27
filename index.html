@@ -99,6 +99,12 @@
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         }
         
+        .btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .result-section {
             background: #e8f4f8;
             border-radius: 15px;
@@ -243,6 +249,9 @@
             display: none;
             text-align: center;
             padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            margin: 10px 0;
         }
         
         .spinner {
@@ -296,6 +305,27 @@
             background: #48bb78;
             width: 100%;
             margin-top: 10px;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+            border-left: 4px solid #fc8181;
+        }
+        
+        .debug-info {
+            background: #e6fffa;
+            color: #234e52;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.85em;
+            font-family: monospace;
+            display: none;
         }
         
         @media (max-width: 480px) {
@@ -377,16 +407,20 @@
                 <button class="btn" onclick="retakePhoto()">
                     <span class="nepali-text">🔄 पुनः लिनुहोस्</span>
                 </button>
-                <button class="btn btn-success" onclick="processImage()">
+                <button class="btn btn-success" onclick="processImage()" id="read-btn">
                     <span class="nepali-text">✅ मान पढ्नुहोस्</span>
                 </button>
             </div>
+            
+            <div class="error-message" id="error-message"></div>
+            <div class="debug-info" id="debug-info"></div>
         </div>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p class="nepali-text">छवि प्रशोधन गर्दै... (Processing image...)</p>
-            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">कृपया केही सेकन्ड पर्खनुहोस्</p>
+            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">कृपया केही सेकन्ड पर्खनुहोस् (Please wait 5-10 seconds)</p>
+            <p style="font-size: 0.8em; color: #999; margin-top: 5px;">पहिलो पटक लोड हुँदा ढिलो हुन सक्छ (May be slow on first use)</p>
         </div>
 
         <div class="result-section" id="result-section">
@@ -438,28 +472,69 @@
         let stream = null;
         let currentImageData = null;
         let readings = JSON.parse(localStorage.getItem('bpReadings') || '[]');
+        let isProcessing = false;
         
         // Initialize
         updateHistoryDisplay();
+        
+        // Check if Tesseract is loaded
+        if (typeof Tesseract === 'undefined') {
+            showError('OCR library not loaded. Please check internet connection and refresh.');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showDebug(message) {
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.textContent = message;
+            debugDiv.style.display = 'block';
+        }
 
         async function startCamera() {
             try {
+                // Check if running on HTTPS or localhost (required for camera)
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                    showError('Camera requires HTTPS. Please use https:// or localhost.');
+                    return;
+                }
+
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    } 
+                    },
+                    audio: false
                 });
+                
                 const video = document.getElementById('video');
                 video.srcObject = stream;
                 video.style.display = 'block';
                 document.getElementById('camera-controls').style.display = 'none';
                 document.getElementById('capture-controls').style.display = 'block';
                 document.getElementById('captured-image').style.display = 'none';
+                document.getElementById('error-message').style.display = 'none';
+                
             } catch (err) {
-                alert('क्यामेरा खोल्न समस्या भयो। कृपया अनुमति दिनुहोस्। (Error opening camera)');
-                console.error(err);
+                console.error('Camera error:', err);
+                let errorMsg = 'क्यामेरा खोल्न समस्या भयो। (Error opening camera)';
+                
+                if (err.name === 'NotAllowedError') {
+                    errorMsg = 'क्यामेरा अनुमति अस्वीकृत। कृपया ब्राउजर सेटिङमा अनुमति दिनुहोस्। (Camera permission denied)';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg = 'कुनै क्यामेरा भेटिएन। (No camera found)';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg = 'क्यामेरा अरू एपले प्रयोग गरिरहेको छ। (Camera in use by another app)';
+                }
+                
+                showError(errorMsg);
             }
         }
 
@@ -480,11 +555,18 @@
             const canvas = document.getElementById('canvas');
             const context = canvas.getContext('2d');
             
+            if (!video.videoWidth || !video.videoHeight) {
+                showError('भिडियो तयार छैन। केही सेकन्ड पर्खनुहोस्। (Video not ready)');
+                return;
+            }
+            
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            currentImageData = canvas.toDataURL('image/png');
+            // Compress image for faster OCR
+            currentImageData = canvas.toDataURL('image/jpeg', 0.8);
+            
             document.getElementById('captured-image').src = currentImageData;
             document.getElementById('captured-image').style.display = 'block';
             document.getElementById('video').style.display = 'none';
@@ -497,48 +579,100 @@
         function retakePhoto() {
             document.getElementById('captured-image').style.display = 'none';
             document.getElementById('result-section').style.display = 'none';
+            document.getElementById('debug-info').style.display = 'none';
             startCamera();
         }
 
         async function processImage() {
-            if (!currentImageData) return;
+            if (!currentImageData) {
+                showError('कुनै छवि छैन। (No image captured)');
+                return;
+            }
+            
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            const readBtn = document.getElementById('read-btn');
+            readBtn.disabled = true;
             
             document.getElementById('loading').style.display = 'block';
             document.getElementById('retake-controls').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
             
             try {
-                const result = await Tesseract.recognize(
-                    currentImageData,
-                    'eng',
-                    { 
-                        logger: m => console.log(m),
-                        tessedit_char_whitelist: '0123456789/'
-                    }
-                );
+                showDebug('Loading OCR engine...');
+                
+                // Initialize Tesseract worker
+                const worker = await Tesseract.createWorker();
+                
+                showDebug('Processing image...');
+                
+                const result = await worker.recognize(currentImageData);
+                
+                showDebug('OCR Complete. Analyzing...');
+                
+                await worker.terminate();
                 
                 const text = result.data.text;
-                console.log('OCR Result:', text);
+                console.log('OCR Raw Result:', text);
+                showDebug('Raw text: ' + text.substring(0, 100));
                 
-                // Extract numbers (looking for 2-3 digit numbers typical for BP)
+                // Extract numbers - improved regex for BP monitors
+                // Look for 2-3 digit numbers
                 const numbers = text.match(/\b\d{2,3}\b/g);
                 
+                console.log('Extracted numbers:', numbers);
+                
                 if (numbers && numbers.length >= 2) {
-                    // Sort and assign (typically SYS > DIA)
-                    const sorted = numbers.map(Number).sort((a, b) => b - a);
-                    const sys = sorted[0];
-                    const dia = sorted[1];
-                    const pulse = numbers.length > 2 ? sorted[2] : '--';
+                    // Convert to integers
+                    const nums = numbers.map(Number);
+                    
+                    // Sort descending (BP usually has SYS > DIA)
+                    nums.sort((a, b) => b - a);
+                    
+                    // BP logic: SYS is usually highest, DIA is second highest
+                    // But we need to be smart - typical BP ranges
+                    let sys, dia, pulse;
+                    
+                    // Filter reasonable BP values (40-300 range)
+                    const validBP = nums.filter(n => n >= 40 && n <= 300);
+                    
+                    if (validBP.length >= 2) {
+                        sys = validBP[0];
+                        dia = validBP[1];
+                        
+                        // Pulse is usually 40-200, often third number or different
+                        const possiblePulse = nums.find(n => n >= 40 && n <= 200 && n !== sys && n !== dia);
+                        pulse = possiblePulse || '--';
+                    } else {
+                        // Fallback to first two numbers
+                        sys = nums[0];
+                        dia = nums[1];
+                        pulse = nums[2] || '--';
+                    }
+                    
+                    // Validate BP relationship (SYS should be > DIA)
+                    if (sys <= dia) {
+                        // Might be wrong assignment, try to fix
+                        if (nums.length >= 3 && nums[0] > nums[2]) {
+                            sys = nums[0];
+                            dia = nums[2];
+                        }
+                    }
                     
                     displayResults(sys, dia, pulse);
                 } else {
-                    alert('मानहरू पहिचान गर्न सकिएन। कृपया म्यानुअल रूपमा प्रविष्ट गर्नुहोस्। (Could not detect values)');
-                    manualEntry();
+                    throw new Error('मानहरू पहिचान गर्न सकिएन (Could not detect values)');
                 }
+                
             } catch (error) {
-                console.error(error);
-                alert('छवि प्रशोधनमा त्रुटि। (Error processing image)');
+                console.error('OCR Error:', error);
+                showError('त्रुटि: ' + error.message + '. म्यानुअल प्रविष्टि प्रयोग गर्नुहोस्।');
+                manualEntry();
             } finally {
                 document.getElementById('loading').style.display = 'none';
+                readBtn.disabled = false;
+                isProcessing = false;
             }
         }
 
@@ -550,10 +684,10 @@
             const statusBox = document.getElementById('status-box');
             const statusText = document.getElementById('status-text');
             
-            const highSys = parseInt(document.getElementById('highSys').value);
-            const highDia = parseInt(document.getElementById('highDia').value);
-            const lowSys = parseInt(document.getElementById('lowSys').value);
-            const lowDia = parseInt(document.getElementById('lowDia').value);
+            const highSys = parseInt(document.getElementById('highSys').value) || 140;
+            const highDia = parseInt(document.getElementById('highDia').value) || 90;
+            const lowSys = parseInt(document.getElementById('lowSys').value) || 90;
+            const lowDia = parseInt(document.getElementById('lowDia').value) || 60;
             
             let status = '';
             let statusClass = '';
@@ -578,12 +712,14 @@
 
         function manualEntry() {
             const sys = prompt('सिस्टोलिक मान प्रविष्ट गर्नुहोस् (Enter Systolic):');
+            if (!sys) return;
+            
             const dia = prompt('डाइस्टोलिक मान प्रविष्ट गर्नुहोस् (Enter Diastolic):');
+            if (!dia) return;
+            
             const pulse = prompt('पल्स मान प्रविष्ट गर्नुहोस् (Enter Pulse) - वैकल्पिक:');
             
-            if (sys && dia) {
-                displayResults(parseInt(sys), parseInt(dia), pulse || '--');
-            }
+            displayResults(parseInt(sys), parseInt(dia), pulse || '--');
         }
 
         function saveReading() {
@@ -613,6 +749,7 @@
             document.getElementById('captured-image').style.display = 'none';
             document.getElementById('camera-controls').style.display = 'block';
             document.getElementById('retake-controls').style.display = 'none';
+            document.getElementById('debug-info').style.display = 'none';
         }
 
         function updateHistoryDisplay() {
