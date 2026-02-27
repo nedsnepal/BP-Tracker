@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BP Monitor Reader - FCHV Survey</title>
-    <!-- Use Tesseract.js v5 with correct API -->
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <title>BP Tracker - Simple Photo + Manual Entry</title>
     <style>
         * {
             margin: 0;
@@ -15,612 +13,395 @@
         }
         
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            background: #f0f2f5;
             padding: 15px;
-            color: #333;
-        }
-        
-        .container {
             max-width: 600px;
             margin: 0 auto;
+        }
+        
+        .header {
+            background: #2c5aa0;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .card {
             background: white;
-            border-radius: 20px;
             padding: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 5px;
-            font-size: 1.6em;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-        }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
+            border-radius: 10px;
             margin-bottom: 15px;
-            font-size: 0.9em;
-            display: none;
-        }
-        
-        .alert-error {
-            background: #fee;
-            color: #c33;
-            border-left: 4px solid #c33;
-        }
-        
-        .alert-success {
-            background: #efe;
-            color: #3c3;
-            border-left: 4px solid #3c3;
-        }
-        
-        .alert-info {
-            background: #e6f3ff;
-            color: #0066cc;
-            border-left: 4px solid #0066cc;
-            display: block;
-        }
-        
-        .camera-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        #video {
-            width: 100%;
-            max-width: 400px;
-            border-radius: 10px;
-            display: none;
-            margin: 0 auto 15px;
-            border: 3px solid #667eea;
-        }
-        
-        #canvas {
-            display: none;
-        }
-        
-        #captured-image {
-            width: 100%;
-            max-width: 400px;
-            border-radius: 10px;
-            margin: 15px auto;
-            display: none;
-            border: 3px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2c5aa0;
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
+            padding: 15px;
+            border-radius: 8px;
             font-size: 16px;
+            width: 100%;
             cursor: pointer;
-            margin: 5px;
-            transition: transform 0.2s;
-            font-weight: 600;
-            width: 90%;
-            max-width: 300px;
+            margin-bottom: 10px;
         }
         
-        .btn:active {
-            transform: scale(0.98);
+        .btn-success { background: #27ae60; }
+        .btn-danger { background: #e74c3c; }
+        .btn-warning { background: #f39c12; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
         }
         
-        .btn-secondary {
-            background: #95a5a6;
-        }
-        
-        .btn-success {
-            background: #27ae60;
-        }
-        
-        .btn:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .result-section {
-            background: #e8f4f8;
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
+        .photo-preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 2px solid #2c5aa0;
             display: none;
         }
         
-        .bp-display {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            flex-wrap: wrap;
+        .bp-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
         }
         
         .bp-box {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
             text-align: center;
-            min-width: 100px;
-            margin: 5px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        
+        .bp-box.active {
+            border-color: #2c5aa0;
+            background: #e3f2fd;
         }
         
         .bp-label {
-            font-size: 0.85em;
-            color: #7f8c8d;
+            font-size: 12px;
+            color: #666;
             margin-bottom: 5px;
         }
         
         .bp-value {
-            font-size: 1.8em;
+            font-size: 24px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #2c5aa0;
         }
         
-        .status-box {
+        .status {
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 8px;
             text-align: center;
-            font-size: 1.1em;
             font-weight: bold;
-            margin-top: 15px;
-        }
-        
-        .status-normal {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .status-high {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        
-        .status-low {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .debug-box {
-            background: #f4f4f4;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-family: monospace;
-            font-size: 0.8em;
-            text-align: left;
-            display: none;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        .manual-entry {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
+            margin: 10px 0;
             display: none;
         }
         
-        .input-row {
+        .status-high { background: #ffebee; color: #c62828; }
+        .status-normal { background: #e8f5e9; color: #2e7d32; }
+        .status-low { background: #fff3e0; color: #ef6c00; }
+        
+        .record-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #2c5aa0;
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .hidden { display: none !important; }
+        
+        h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .helper-text {
+            color: #666;
+            font-size: 14px;
             margin-bottom: 10px;
-        }
-        
-        .input-row input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        
-        @media (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-            h1 {
-                font-size: 1.4em;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🩺 BP Monitor Reader</h1>
-        <p class="subtitle">FCHV Survey Tool | Offline Compatible</p>
+
+    <div class="header">
+        <h2>🩺 BP Tracker</h2>
+        <p style="font-size: 14px; opacity: 0.9;">FCHV Survey Tool | Photo + Quick Entry</p>
+    </div>
+
+    <!-- STEP 1: Patient Info -->
+    <div class="card" id="step1">
+        <h3>Step 1: Patient Information</h3>
+        <input type="text" id="patientId" placeholder="Patient ID (e.g. FCHV-001)">
+        <input type="number" id="age" placeholder="Age (years)">
+        <select id="gender">
+            <option value="">Select Gender</option>
+            <option value="F">Female</option>
+            <option value="M">Male</option>
+        </select>
+        <input type="text" id="location" placeholder="Village/Ward">
+        <button class="btn btn-success" onclick="goToStep2()">Next: Take Photo →</button>
+    </div>
+
+    <!-- STEP 2: Photo -->
+    <div class="card hidden" id="step2">
+        <h3>Step 2: Photo of BP Monitor</h3>
+        <p class="helper-text">Take a clear photo of the BP monitor screen showing the numbers</p>
         
-        <div class="alert alert-info" id="info-box">
-            <strong>Tip:</strong> Ensure good lighting and hold phone steady. First OCR load may take 10-15 seconds.
-        </div>
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
         
-        <div class="alert alert-error" id="error-box"></div>
-        <div class="alert alert-success" id="success-box"></div>
-
-        <div class="camera-section">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
-            <img id="captured-image" alt="Captured">
-            
-            <div id="camera-controls">
-                <button class="btn" onclick="startCamera()">
-                    📷 Open Camera
-                </button>
-            </div>
-            
-            <div id="capture-controls" style="display: none;">
-                <button class="btn btn-success" onclick="capturePhoto()">
-                    📸 Take Photo
-                </button>
-                <button class="btn btn-secondary" onclick="stopCamera()">
-                    ❌ Cancel
-                </button>
-            </div>
-            
-            <div id="retake-controls" style="display: none;">
-                <button class="btn" onclick="retakePhoto()">
-                    🔄 Retake
-                </button>
-                <button class="btn btn-success" onclick="processImage()" id="read-btn">
-                    ✅ Read BP Values
-                </button>
-            </div>
-            
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Processing... Please wait</p>
-                <p style="font-size: 0.8em; color: #666;">Loading OCR engine (one-time)</p>
-            </div>
-            
-            <div class="debug-box" id="debug-box"></div>
-        </div>
-
-        <div class="result-section" id="result-section">
-            <h3 style="text-align: center; margin-bottom: 15px;">📊 Results</h3>
-            
-            <div class="bp-display">
-                <div class="bp-box">
-                    <div class="bp-label">SYS (mmHg)</div>
-                    <div class="bp-value" id="sys-value">--</div>
-                </div>
-                <div class="bp-box">
-                    <div class="bp-label">DIA (mmHg)</div>
-                    <div class="bp-value" id="dia-value">--</div>
-                </div>
-                <div class="bp-box">
-                    <div class="bp-label">PULSE</div>
-                    <div class="bp-value" id="pulse-value">--</div>
-                </div>
-            </div>
-
-            <div class="status-box" id="status-box"></div>
-            
-            <div style="margin-top: 15px; text-align: center;">
-                <button class="btn" onclick="showManualEntry()" style="background: #e67e22;">
-                    ✏️ Manual Entry
-                </button>
-                <button class="btn btn-success" onclick="saveReading()">
-                    💾 Save Record
-                </button>
-            </div>
-        </div>
-
-        <div class="manual-entry" id="manual-entry">
-            <h4>Manual BP Entry</h4>
-            <div class="input-row">
-                <input type="number" id="manual-sys" placeholder="Systolic (e.g. 120)">
-                <input type="number" id="manual-dia" placeholder="Diastolic (e.g. 80)">
-            </div>
-            <div class="input-row">
-                <input type="number" id="manual-pulse" placeholder="Pulse (optional)">
-            </div>
-            <button class="btn btn-success" onclick="submitManual()" style="width: 100%;">
-                Submit Values
-            </button>
+        <button class="btn" onclick="document.getElementById('camera-input').click()">
+            📷 Take Photo
+        </button>
+        
+        <img id="photo-preview" class="photo-preview">
+        
+        <div id="photo-buttons" class="hidden">
+            <button class="btn btn-success" onclick="goToStep3()">Photo OK - Enter Values →</button>
+            <button class="btn btn-danger" onclick="retakePhoto()">Retake Photo</button>
         </div>
     </div>
 
+    <!-- STEP 3: Enter BP Values -->
+    <div class="card hidden" id="step3">
+        <h3>Step 3: Enter BP Values</h3>
+        <p class="helper-text">Look at the photo above and enter the numbers</p>
+        
+        <img id="reference-photo" class="photo-preview" style="display: block; max-height: 200px;">
+        
+        <div class="bp-inputs">
+            <div class="bp-box">
+                <div class="bp-label">SYS</div>
+                <input type="number" id="sys" placeholder="120" style="margin: 0; text-align: center;">
+            </div>
+            <div class="bp-box">
+                <div class="bp-label">DIA</div>
+                <input type="number" id="dia" placeholder="80" style="margin: 0; text-align: center;">
+            </div>
+            <div class="bp-box">
+                <div class="bp-label">PULSE</div>
+                <input type="number" id="pulse" placeholder="72" style="margin: 0; text-align: center;">
+            </div>
+        </div>
+        
+        <div id="bp-status" class="status"></div>
+        
+        <button class="btn btn-success" onclick="calculateAndSave()">💾 Save Record</button>
+        <button class="btn btn-warning" onclick="goBack()">← Back</button>
+    </div>
+
+    <!-- STEP 4: Records List -->
+    <div class="card" id="records-section">
+        <h3>📋 Saved Records (<span id="record-count">0</span>)</h3>
+        <div id="records-list"></div>
+        <button class="btn" onclick="exportData()" style="margin-top: 10px;">
+            📥 Export All Data (CSV)
+        </button>
+        <button class="btn btn-danger" onclick="clearAll()" style="margin-top: 10px;">
+            🗑️ Clear All Data
+        </button>
+    </div>
+
     <script>
-        let stream = null;
-        let currentImageData = null;
-        let worker = null;
-        let isProcessing = false;
-
-        // Initialize worker on page load
-        async function initWorker() {
-            try {
-                logDebug('Initializing Tesseract worker...');
-                // Tesseract v5 API: createWorker(language)
-                worker = await Tesseract.createWorker('eng');
-                logDebug('Worker ready!');
-                showSuccess('OCR engine loaded. Ready to scan.');
-            } catch (err) {
-                console.error('Worker init failed:', err);
-                showError('OCR failed to load. Check internet connection.');
+        let currentPhoto = null;
+        let records = JSON.parse(localStorage.getItem('bpRecords') || '[]');
+        
+        // Load camera input handler
+        document.getElementById('camera-input').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    currentPhoto = event.target.result;
+                    document.getElementById('photo-preview').src = currentPhoto;
+                    document.getElementById('photo-preview').style.display = 'block';
+                    document.getElementById('photo-buttons').classList.remove('hidden');
+                };
+                reader.readAsDataURL(e.target.files[0]);
             }
-        }
-
-        // Start worker initialization
-        initWorker();
-
-        function logDebug(msg) {
-            console.log(msg);
-            const debugBox = document.getElementById('debug-box');
-            debugBox.style.display = 'block';
-            debugBox.innerHTML += msg + '<br>';
-        }
-
-        function showError(msg) {
-            const box = document.getElementById('error-box');
-            box.textContent = msg;
-            box.style.display = 'block';
-            setTimeout(() => box.style.display = 'none', 5000);
-        }
-
-        function showSuccess(msg) {
-            const box = document.getElementById('success-box');
-            box.textContent = msg;
-            box.style.display = 'block';
-            setTimeout(() => box.style.display = 'none', 3000);
-        }
-
-        async function startCamera() {
-            try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    showError('Camera not supported in this browser');
-                    return;
-                }
-
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false
-                });
-                
-                const video = document.getElementById('video');
-                video.srcObject = stream;
-                video.style.display = 'block';
-                
-                document.getElementById('camera-controls').style.display = 'none';
-                document.getElementById('capture-controls').style.display = 'block';
-                document.getElementById('captured-image').style.display = 'none';
-                document.getElementById('result-section').style.display = 'none';
-                
-            } catch (err) {
-                console.error('Camera error:', err);
-                let msg = 'Camera error: ';
-                if (err.name === 'NotAllowedError') msg += 'Permission denied';
-                else if (err.name === 'NotFoundError') msg += 'No camera found';
-                else msg += err.message;
-                showError(msg);
-            }
-        }
-
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            document.getElementById('video').style.display = 'none';
-            document.getElementById('camera-controls').style.display = 'block';
-            document.getElementById('capture-controls').style.display = 'none';
-            document.getElementById('retake-controls').style.display = 'none';
-        }
-
-        function capturePhoto() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            if (!video.videoWidth) {
-                showError('Video not ready yet. Please wait.');
+        });
+        
+        function goToStep2() {
+            if (!document.getElementById('patientId').value) {
+                alert('Please enter Patient ID');
                 return;
             }
-            
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-            
-            // Compress for mobile
-            currentImageData = canvas.toDataURL('image/jpeg', 0.8);
-            
-            document.getElementById('captured-image').src = currentImageData;
-            document.getElementById('captured-image').style.display = 'block';
-            document.getElementById('video').style.display = 'none';
-            document.getElementById('capture-controls').style.display = 'none';
-            document.getElementById('retake-controls').style.display = 'block';
-            
-            stopCamera();
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
         }
-
+        
         function retakePhoto() {
-            document.getElementById('captured-image').style.display = 'none';
-            document.getElementById('result-section').style.display = 'none';
-            document.getElementById('debug-box').style.display = 'none';
-            document.getElementById('debug-box').innerHTML = '';
-            startCamera();
+            document.getElementById('camera-input').value = '';
+            document.getElementById('photo-preview').style.display = 'none';
+            document.getElementById('photo-buttons').classList.add('hidden');
+            currentPhoto = null;
         }
-
-        async function processImage() {
-            if (!currentImageData) {
-                showError('No image captured');
-                return;
-            }
-            
-            if (!worker) {
-                showError('OCR not loaded yet. Please wait or refresh.');
-                return;
-            }
-            
-            if (isProcessing) return;
-            isProcessing = true;
-            
-            const readBtn = document.getElementById('read-btn');
-            readBtn.disabled = true;
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('retake-controls').style.display = 'none';
-            
-            try {
-                logDebug('Starting OCR recognition...');
-                
-                // Tesseract v5 API
-                const result = await worker.recognize(currentImageData);
-                const text = result.data.text;
-                
-                logDebug('OCR Text: ' + text.replace(/\n/g, ' '));
-                
-                // Extract numbers
-                const numbers = text.match(/\d+/g);
-                logDebug('Found numbers: ' + (numbers ? numbers.join(', ') : 'none'));
-                
-                if (numbers && numbers.length >= 2) {
-                    const nums = numbers.map(Number).filter(n => n >= 40 && n <= 300);
-                    nums.sort((a, b) => b - a);
-                    
-                    if (nums.length >= 2) {
-                        const sys = nums[0];
-                        const dia = nums[1];
-                        const pulse = nums[2] || '--';
-                        
-                        // Validate BP logic
-                        if (sys > dia) {
-                            displayResults(sys, dia, pulse);
-                            showSuccess('BP values detected!');
-                        } else {
-                            throw new Error('Invalid BP values detected');
-                        }
-                    } else {
-                        throw new Error('Could not find valid BP values');
-                    }
-                } else {
-                    throw new Error('No numbers found in image');
-                }
-                
-            } catch (error) {
-                console.error('OCR Error:', error);
-                logDebug('Error: ' + error.message);
-                showError('OCR failed: ' + error.message + '. Try manual entry.');
-                showManualEntry();
-            } finally {
-                document.getElementById('loading').style.display = 'none';
-                readBtn.disabled = false;
-                isProcessing = false;
-            }
+        
+        function goToStep3() {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+            document.getElementById('reference-photo').src = currentPhoto;
         }
-
-        function displayResults(sys, dia, pulse) {
-            document.getElementById('sys-value').textContent = sys;
-            document.getElementById('dia-value').textContent = dia;
-            document.getElementById('pulse-value').textContent = pulse;
-            
-            const statusBox = document.getElementById('status-box');
-            
-            // Simple BP classification
-            if (sys >= 140 || dia >= 90) {
-                statusBox.className = 'status-box status-high';
-                statusBox.innerHTML = '⚠️ HIGH BP<br><small>Consult doctor</small>';
-            } else if (sys <= 90 || dia <= 60) {
-                statusBox.className = 'status-box status-low';
-                statusBox.innerHTML = '⚠️ LOW BP<br><small>Take caution</small>';
-            } else {
-                statusBox.className = 'status-box status-normal';
-                statusBox.innerHTML = '✅ NORMAL BP';
-            }
-            
-            document.getElementById('result-section').style.display = 'block';
-            document.getElementById('retake-controls').style.display = 'block';
+        
+        function goBack() {
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
         }
-
-        function showManualEntry() {
-            document.getElementById('manual-entry').style.display = 'block';
-        }
-
-        function submitManual() {
-            const sys = parseInt(document.getElementById('manual-sys').value);
-            const dia = parseInt(document.getElementById('manual-dia').value);
-            const pulse = document.getElementById('manual-pulse').value || '--';
+        
+        function calculateAndSave() {
+            const sys = parseInt(document.getElementById('sys').value);
+            const dia = parseInt(document.getElementById('dia').value);
+            const pulse = document.getElementById('pulse').value;
             
             if (!sys || !dia) {
-                showError('Please enter both systolic and diastolic values');
+                alert('Please enter both Systolic and Diastolic values');
                 return;
             }
             
-            displayResults(sys, dia, pulse);
-            document.getElementById('manual-entry').style.display = 'none';
+            // Calculate status
+            let status, statusClass;
+            if (sys >= 140 || dia >= 90) {
+                status = 'HIGH BP - Refer to doctor';
+                statusClass = 'status-high';
+            } else if (sys <= 90 || dia <= 60) {
+                status = 'LOW BP - Monitor closely';
+                statusClass = 'status-low';
+            } else {
+                status = 'NORMAL BP';
+                statusClass = 'status-normal';
+            }
             
-            // Clear inputs
-            document.getElementById('manual-sys').value = '';
-            document.getElementById('manual-dia').value = '';
-            document.getElementById('manual-pulse').value = '';
-        }
-
-        function saveReading() {
-            const sys = document.getElementById('sys-value').textContent;
-            const dia = document.getElementById('dia-value').textContent;
-            const pulse = document.getElementById('pulse-value').textContent;
-            const status = document.getElementById('status-box').textContent;
+            // Show status
+            const statusDiv = document.getElementById('bp-status');
+            statusDiv.textContent = status;
+            statusDiv.className = 'status ' + statusClass;
+            statusDiv.style.display = 'block';
             
-            const reading = {
-                id: Date.now(),
-                date: new Date().toLocaleString(),
-                sys, dia, pulse, status
-            };
-            
-            // Get existing readings
-            let readings = JSON.parse(localStorage.getItem('bpReadings') || '[]');
-            readings.push(reading);
-            localStorage.setItem('bpReadings', JSON.stringify(readings));
-            
-            showSuccess('Saved! Total records: ' + readings.length);
-            
-            // Reset
+            // Save after short delay
             setTimeout(() => {
-                document.getElementById('result-section').style.display = 'none';
-                document.getElementById('captured-image').style.display = 'none';
-                document.getElementById('camera-controls').style.display = 'block';
-                document.getElementById('retake-controls').style.display = 'none';
-                document.getElementById('debug-box').style.display = 'none';
-            }, 1500);
+                const record = {
+                    id: Date.now(),
+                    date: new Date().toLocaleString(),
+                    patientId: document.getElementById('patientId').value,
+                    age: document.getElementById('age').value,
+                    gender: document.getElementById('gender').value,
+                    location: document.getElementById('location').value,
+                    sys: sys,
+                    dia: dia,
+                    pulse: pulse || '-',
+                    status: status,
+                    photo: currentPhoto
+                };
+                
+                records.push(record);
+                localStorage.setItem('bpRecords', JSON.stringify(records));
+                
+                alert('✅ Record saved successfully!');
+                resetForm();
+                updateRecordsList();
+            }, 500);
         }
+        
+        function resetForm() {
+            // Clear all inputs
+            document.getElementById('patientId').value = '';
+            document.getElementById('age').value = '';
+            document.getElementById('gender').value = '';
+            document.getElementById('location').value = '';
+            document.getElementById('sys').value = '';
+            document.getElementById('dia').value = '';
+            document.getElementById('pulse').value = '';
+            document.getElementById('bp-status').style.display = 'none';
+            
+            // Reset photo
+            retakePhoto();
+            
+            // Go back to step 1
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+        }
+        
+        function updateRecordsList() {
+            document.getElementById('record-count').textContent = records.length;
+            const list = document.getElementById('records-list');
+            
+            if (records.length === 0) {
+                list.innerHTML = '<p style="color: #999; text-align: center;">No records yet</p>';
+                return;
+            }
+            
+            list.innerHTML = records.slice().reverse().map(r => `
+                <div class="record-item">
+                    <div>
+                        <strong>${r.patientId}</strong> - ${r.sys}/${r.dia} mmHg<br>
+                        <small style="color: #666;">${r.date}</small>
+                    </div>
+                    <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Delete</button>
+                </div>
+            `).join('');
+        }
+        
+        function deleteRecord(id) {
+            if (confirm('Delete this record?')) {
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem('bpRecords', JSON.stringify(records));
+                updateRecordsList();
+            }
+        }
+        
+        function exportData() {
+            if (records.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            let csv = 'Date,Patient ID,Age,Gender,Location,Systolic,Diastolic,Pulse,Status\n';
+            records.forEach(r => {
+                csv += `"${r.date}","${r.patientId}","${r.age}","${r.gender}","${r.location}","${r.sys}","${r.dia}","${r.pulse}","${r.status}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BP_Survey_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            alert('📥 CSV file downloaded!');
+        }
+        
+        function clearAll() {
+            if (records.length === 0) return;
+            if (confirm(`Delete all ${records.length} records? This cannot be undone!`)) {
+                records = [];
+                localStorage.removeItem('bpRecords');
+                updateRecordsList();
+                alert('All data cleared');
+            }
+        }
+        
+        // Initialize
+        updateRecordsList();
     </script>
 </body>
 </html>
