@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BP Monitor Reader - एफसीएचभी सर्वेक्षण</title>
+    <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+            font-size: 0.95em;
+        }
+        
+        .camera-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        #video {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 10px;
+            display: none;
+            margin: 0 auto 15px;
+            border: 3px solid #667eea;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        #captured-image {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 10px;
+            margin: 15px auto;
+            display: none;
+            border: 3px solid #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .result-section {
+            background: #e8f4f8;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .bp-display {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .bp-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 120px;
+            margin: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .bp-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .bp-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .status-box {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        
+        .status-normal {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-high {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .status-low {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        
+        .settings-section {
+            background: #fff5f5;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #fed7d7;
+        }
+        
+        .settings-title {
+            font-weight: bold;
+            color: #c53030;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .threshold-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-group label {
+            font-size: 0.85em;
+            color: #4a5568;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .input-group input {
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .nepali-text {
+            font-family: 'Kalimati', 'Noto Sans Devanagari', sans-serif;
+            line-height: 1.6;
+        }
+        
+        .instructions {
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .instructions h3 {
+            color: #2c7a7b;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            margin-left: 20px;
+            color: #4a5568;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .history-section {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+        
+        .history-time {
+            font-size: 0.8em;
+            color: #718096;
+        }
+        
+        .delete-btn {
+            background: #fc8181;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        
+        .export-btn {
+            background: #48bb78;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .threshold-inputs {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🩺 बीपी मनिटर रिडर</h1>
+        <p class="subtitle">FCHV Community Survey Tool | एफसीएचभी समुदाय सर्वेक्षण</p>
+        
+        <div class="instructions nepali-text">
+            <h3>📋 निर्देशनहरू (Instructions):</h3>
+            <ul>
+                <li>बीपी मनिटरको स्क्रिन सफा राख्नुहोस् (Keep BP monitor screen clean)</li>
+                <li>राम्रो प्रकाशमा फोटो लिनुहोस् (Take photo in good light)</li>
+                <li>नम्बरहरू स्पष्ट देखिनुपर्छ (Numbers must be clearly visible)</li>
+                <li>हृदय दर (पल्स) पनि क्याप्चर गर्नुहोस् (Capture heart rate/pulse too)</li>
+            </ul>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-title">
+                <span>⚙️</span>
+                <span class="nepali-text">सीमा मानहरू सेट गर्नुहोस् (Set Thresholds)</span>
+            </div>
+            <div class="threshold-inputs">
+                <div class="input-group">
+                    <label class="nepali-text">उच्च बीपी सिस्टोलिक (High BP Systolic)</label>
+                    <input type="number" id="highSys" value="140" min="90" max="200">
+                </div>
+                <div class="input-group">
+                    <label class="nepali-text">उच्च बीपी डाइस्टोलिक (High BP Diastolic)</label>
+                    <input type="number" id="highDia" value="90" min="60" max="130">
+                </div>
+                <div class="input-group">
+                    <label class="nepali-text">निम्न बीपी सिस्टोलिक (Low BP Systolic)</label>
+                    <input type="number" id="lowSys" value="90" min="70" max="120">
+                </div>
+                <div class="input-group">
+                    <label class="nepali-text">निम्न बीपी डाइस्टोलिक (Low BP Diastolic)</label>
+                    <input type="number" id="lowDia" value="60" min="40" max="80">
+                </div>
+            </div>
+        </div>
+
+        <div class="camera-section">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+            <img id="captured-image" alt="Captured BP Monitor">
+            
+            <div id="camera-controls">
+                <button class="btn" onclick="startCamera()">
+                    <span class="nepali-text">📷 क्यामेरा खोल्नुहोस्</span>
+                </button>
+            </div>
+            
+            <div id="capture-controls" style="display: none;">
+                <button class="btn btn-success" onclick="capturePhoto()">
+                    <span class="nepali-text">📸 फोटो लिनुहोस्</span>
+                </button>
+                <button class="btn btn-secondary" onclick="stopCamera()">
+                    <span class="nepali-text">❌ बन्द गर्नुहोस्</span>
+                </button>
+            </div>
+            
+            <div id="retake-controls" style="display: none;">
+                <button class="btn" onclick="retakePhoto()">
+                    <span class="nepali-text">🔄 पुनः लिनुहोस्</span>
+                </button>
+                <button class="btn btn-success" onclick="processImage()">
+                    <span class="nepali-text">✅ मान पढ्नुहोस्</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p class="nepali-text">छवि प्रशोधन गर्दै... (Processing image...)</p>
+            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">कृपया केही सेकन्ड पर्खनुहोस्</p>
+        </div>
+
+        <div class="result-section" id="result-section">
+            <h3 style="text-align: center; margin-bottom: 15px; color: #2c3e50;" class="nepali-text">
+                📊 परिणाम (Results)
+            </h3>
+            
+            <div class="bp-display">
+                <div class="bp-box">
+                    <div class="bp-label nepali-text">सिस्टोलिक (SYS)</div>
+                    <div class="bp-value" id="sys-value">--</div>
+                </div>
+                <div class="bp-box">
+                    <div class="bp-label nepali-text">डाइस्टोलिक (DIA)</div>
+                    <div class="bp-value" id="dia-value">--</div>
+                </div>
+                <div class="bp-box">
+                    <div class="bp-label nepali-text">पल्स (PULSE)</div>
+                    <div class="bp-value" id="pulse-value">--</div>
+                </div>
+            </div>
+
+            <div class="status-box" id="status-box">
+                <span id="status-text"></span>
+            </div>
+
+            <div style="margin-top: 15px; text-align: center;">
+                <button class="btn" onclick="manualEntry()" style="background: #ed8936;">
+                    <span class="nepali-text">✏️ म्यानुअल रूपमा प्रविष्ट गर्नुहोस्</span>
+                </button>
+                <button class="btn btn-success" onclick="saveReading()">
+                    <span class="nepali-text">💾 सेभ गर्नुहोस्</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="history-section" id="history-section" style="display: none;">
+            <h3 style="margin-bottom: 15px; color: #2c3e50;" class="nepali-text">
+                📚 इतिहास (History)
+            </h3>
+            <div id="history-list"></div>
+            <button class="btn export-btn" onclick="exportData()">
+                <span class="nepali-text">📥 डाटा निर्यात गर्नुहोस् (Export CSV)</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let currentImageData = null;
+        let readings = JSON.parse(localStorage.getItem('bpReadings') || '[]');
+        
+        // Initialize
+        updateHistoryDisplay();
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                document.getElementById('camera-controls').style.display = 'none';
+                document.getElementById('capture-controls').style.display = 'block';
+                document.getElementById('captured-image').style.display = 'none';
+            } catch (err) {
+                alert('क्यामेरा खोल्न समस्या भयो। कृपया अनुमति दिनुहोस्। (Error opening camera)');
+                console.error(err);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            document.getElementById('video').style.display = 'none';
+            document.getElementById('camera-controls').style.display = 'block';
+            document.getElementById('capture-controls').style.display = 'none';
+            document.getElementById('retake-controls').style.display = 'none';
+            document.getElementById('captured-image').style.display = 'none';
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            currentImageData = canvas.toDataURL('image/png');
+            document.getElementById('captured-image').src = currentImageData;
+            document.getElementById('captured-image').style.display = 'block';
+            document.getElementById('video').style.display = 'none';
+            document.getElementById('capture-controls').style.display = 'none';
+            document.getElementById('retake-controls').style.display = 'block';
+            
+            stopCamera();
+        }
+
+        function retakePhoto() {
+            document.getElementById('captured-image').style.display = 'none';
+            document.getElementById('result-section').style.display = 'none';
+            startCamera();
+        }
+
+        async function processImage() {
+            if (!currentImageData) return;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('retake-controls').style.display = 'none';
+            
+            try {
+                const result = await Tesseract.recognize(
+                    currentImageData,
+                    'eng',
+                    { 
+                        logger: m => console.log(m),
+                        tessedit_char_whitelist: '0123456789/'
+                    }
+                );
+                
+                const text = result.data.text;
+                console.log('OCR Result:', text);
+                
+                // Extract numbers (looking for 2-3 digit numbers typical for BP)
+                const numbers = text.match(/\b\d{2,3}\b/g);
+                
+                if (numbers && numbers.length >= 2) {
+                    // Sort and assign (typically SYS > DIA)
+                    const sorted = numbers.map(Number).sort((a, b) => b - a);
+                    const sys = sorted[0];
+                    const dia = sorted[1];
+                    const pulse = numbers.length > 2 ? sorted[2] : '--';
+                    
+                    displayResults(sys, dia, pulse);
+                } else {
+                    alert('मानहरू पहिचान गर्न सकिएन। कृपया म्यानुअल रूपमा प्रविष्ट गर्नुहोस्। (Could not detect values)');
+                    manualEntry();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('छवि प्रशोधनमा त्रुटि। (Error processing image)');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayResults(sys, dia, pulse) {
+            document.getElementById('sys-value').textContent = sys;
+            document.getElementById('dia-value').textContent = dia;
+            document.getElementById('pulse-value').textContent = pulse;
+            
+            const statusBox = document.getElementById('status-box');
+            const statusText = document.getElementById('status-text');
+            
+            const highSys = parseInt(document.getElementById('highSys').value);
+            const highDia = parseInt(document.getElementById('highDia').value);
+            const lowSys = parseInt(document.getElementById('lowSys').value);
+            const lowDia = parseInt(document.getElementById('lowDia').value);
+            
+            let status = '';
+            let statusClass = '';
+            
+            if (sys >= highSys || dia >= highDia) {
+                status = '⚠️ उच्च रक्तचाप (High BP) - चिकित्सकलाई भेट्नुहोस्';
+                statusClass = 'status-high';
+            } else if (sys <= lowSys || dia <= lowDia) {
+                status = '⚠️ निम्न रक्तचाप (Low BP) - सावधानी अपनाउनुहोस्';
+                statusClass = 'status-low';
+            } else {
+                status = '✅ सामान्य रक्तचाप (Normal BP)';
+                statusClass = 'status-normal';
+            }
+            
+            statusText.textContent = status;
+            statusBox.className = 'status-box ' + statusClass;
+            
+            document.getElementById('result-section').style.display = 'block';
+            document.getElementById('retake-controls').style.display = 'block';
+        }
+
+        function manualEntry() {
+            const sys = prompt('सिस्टोलिक मान प्रविष्ट गर्नुहोस् (Enter Systolic):');
+            const dia = prompt('डाइस्टोलिक मान प्रविष्ट गर्नुहोस् (Enter Diastolic):');
+            const pulse = prompt('पल्स मान प्रविष्ट गर्नुहोस् (Enter Pulse) - वैकल्पिक:');
+            
+            if (sys && dia) {
+                displayResults(parseInt(sys), parseInt(dia), pulse || '--');
+            }
+        }
+
+        function saveReading() {
+            const sys = document.getElementById('sys-value').textContent;
+            const dia = document.getElementById('dia-value').textContent;
+            const pulse = document.getElementById('pulse-value').textContent;
+            const status = document.getElementById('status-text').textContent;
+            
+            const reading = {
+                id: Date.now(),
+                date: new Date().toLocaleString('ne-NP'),
+                systolic: sys,
+                diastolic: dia,
+                pulse: pulse,
+                status: status,
+                timestamp: new Date().toISOString()
+            };
+            
+            readings.push(reading);
+            localStorage.setItem('bpReadings', JSON.stringify(readings));
+            
+            alert('सफलतापूर्वक सेभ गरियो! (Saved successfully!)');
+            updateHistoryDisplay();
+            
+            // Reset for next reading
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('captured-image').style.display = 'none';
+            document.getElementById('camera-controls').style.display = 'block';
+            document.getElementById('retake-controls').style.display = 'none';
+        }
+
+        function updateHistoryDisplay() {
+            const historyList = document.getElementById('history-list');
+            const historySection = document.getElementById('history-section');
+            
+            if (readings.length === 0) {
+                historySection.style.display = 'none';
+                return;
+            }
+            
+            historySection.style.display = 'block';
+            historyList.innerHTML = '';
+            
+            // Show last 10 readings in reverse order
+            [...readings].reverse().slice(0, 10).forEach(reading => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>${reading.systolic}/${reading.diastolic}</strong> mmHg
+                        <span style="color: #666; margin-left: 10px;">Pulse: ${reading.pulse}</span>
+                        <div class="history-time">${reading.date}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteReading(${reading.id})">Delete</button>
+                `;
+                historyList.appendChild(item);
+            });
+        }
+
+        function deleteReading(id) {
+            if (confirm('के तपाईं निश्चित हुनुहुन्छ? (Are you sure?)')) {
+                readings = readings.filter(r => r.id !== id);
+                localStorage.setItem('bpReadings', JSON.stringify(readings));
+                updateHistoryDisplay();
+            }
+        }
+
+        function exportData() {
+            if (readings.length === 0) {
+                alert('निर्यात गर्न कुनै डाटा छैन। (No data to export)');
+                return;
+            }
+            
+            let csv = 'Date,Systolic,Diastolic,Pulse,Status\n';
+            readings.forEach(r => {
+                csv += `"${r.date}","${r.systolic}","${r.diastolic}","${r.pulse}","${r.status}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `bp_survey_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('CSV फाइल डाउनलोड गरियो! (CSV file downloaded!)');
+        }
+    </script>
+</body>
+</html>
