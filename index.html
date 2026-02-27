@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BP Monitor Reader - एफसीएचभी सर्वेक्षण</title>
-    <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <title>BP Monitor Reader - FCHV Survey</title>
+    <!-- Use Tesseract.js v5 with correct API -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
         }
         
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 15px;
             color: #333;
         }
         
@@ -25,22 +26,49 @@
             margin: 0 auto;
             background: white;
             border-radius: 20px;
-            padding: 25px;
+            padding: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         
         h1 {
             text-align: center;
             color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 1.8em;
+            margin-bottom: 5px;
+            font-size: 1.6em;
         }
         
         .subtitle {
             text-align: center;
             color: #7f8c8d;
-            margin-bottom: 25px;
-            font-size: 0.95em;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border-left: 4px solid #c33;
+        }
+        
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border-left: 4px solid #3c3;
+        }
+        
+        .alert-info {
+            background: #e6f3ff;
+            color: #0066cc;
+            border-left: 4px solid #0066cc;
+            display: block;
         }
         
         .camera-section {
@@ -82,13 +110,14 @@
             font-size: 16px;
             cursor: pointer;
             margin: 5px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
             font-weight: 600;
+            width: 90%;
+            max-width: 300px;
         }
         
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        .btn:active {
+            transform: scale(0.98);
         }
         
         .btn-secondary {
@@ -96,11 +125,11 @@
         }
         
         .btn-success {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: #27ae60;
         }
         
         .btn:disabled {
-            background: #cbd5e0;
+            background: #bdc3c7;
             cursor: not-allowed;
             transform: none;
         }
@@ -122,22 +151,22 @@
         
         .bp-box {
             background: white;
-            padding: 20px;
-            border-radius: 15px;
+            padding: 15px;
+            border-radius: 12px;
             text-align: center;
-            min-width: 120px;
+            min-width: 100px;
             margin: 5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .bp-label {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #7f8c8d;
             margin-bottom: 5px;
         }
         
         .bp-value {
-            font-size: 2em;
+            font-size: 1.8em;
             font-weight: bold;
             color: #2c3e50;
         }
@@ -146,112 +175,30 @@
             padding: 15px;
             border-radius: 10px;
             text-align: center;
-            font-size: 1.3em;
+            font-size: 1.1em;
             font-weight: bold;
             margin-top: 15px;
-            transition: all 0.3s;
         }
         
         .status-normal {
             background: #d4edda;
             color: #155724;
-            border: 2px solid #c3e6cb;
         }
         
         .status-high {
             background: #f8d7da;
             color: #721c24;
-            border: 2px solid #f5c6cb;
         }
         
         .status-low {
             background: #fff3cd;
             color: #856404;
-            border: 2px solid #ffeaa7;
-        }
-        
-        .settings-section {
-            background: #fff5f5;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 2px solid #fed7d7;
-        }
-        
-        .settings-title {
-            font-weight: bold;
-            color: #c53030;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .threshold-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        
-        .input-group {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .input-group label {
-            font-size: 0.85em;
-            color: #4a5568;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-        
-        .input-group input {
-            padding: 10px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 16px;
-            text-align: center;
-        }
-        
-        .input-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .nepali-text {
-            font-family: 'Kalimati', 'Noto Sans Devanagari', sans-serif;
-            line-height: 1.6;
-        }
-        
-        .instructions {
-            background: #e6fffa;
-            border-left: 4px solid #38b2ac;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 0 10px 10px 0;
-        }
-        
-        .instructions h3 {
-            color: #2c7a7b;
-            margin-bottom: 10px;
-        }
-        
-        .instructions ul {
-            margin-left: 20px;
-            color: #4a5568;
-        }
-        
-        .instructions li {
-            margin-bottom: 8px;
         }
         
         .loading {
             display: none;
             text-align: center;
             padding: 20px;
-            background: #f7fafc;
-            border-radius: 10px;
-            margin: 10px 0;
         }
         
         .spinner {
@@ -269,201 +216,142 @@
             100% { transform: rotate(360deg); }
         }
         
-        .history-section {
-            margin-top: 20px;
-            max-height: 300px;
+        .debug-box {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.8em;
+            text-align: left;
+            display: none;
+            max-height: 150px;
             overflow-y: auto;
         }
         
-        .history-item {
-            background: #f7fafc;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid #667eea;
-        }
-        
-        .history-time {
-            font-size: 0.8em;
-            color: #718096;
-        }
-        
-        .delete-btn {
-            background: #fc8181;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8em;
-        }
-        
-        .export-btn {
-            background: #48bb78;
-            width: 100%;
-            margin-top: 10px;
-        }
-        
-        .error-message {
-            background: #fed7d7;
-            color: #c53030;
+        .manual-entry {
+            background: #fff3cd;
             padding: 15px;
             border-radius: 10px;
-            margin: 10px 0;
+            margin-top: 15px;
             display: none;
-            border-left: 4px solid #fc8181;
         }
         
-        .debug-info {
-            background: #e6fffa;
-            color: #234e52;
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .input-row input {
+            flex: 1;
             padding: 10px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-size: 0.85em;
-            font-family: monospace;
-            display: none;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
         }
         
         @media (max-width: 480px) {
             .container {
                 padding: 15px;
             }
-            
             h1 {
-                font-size: 1.5em;
-            }
-            
-            .threshold-inputs {
-                grid-template-columns: 1fr;
+                font-size: 1.4em;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🩺 बीपी मनिटर रिडर</h1>
-        <p class="subtitle">FCHV Community Survey Tool | एफसीएचभी समुदाय सर्वेक्षण</p>
+        <h1>🩺 BP Monitor Reader</h1>
+        <p class="subtitle">FCHV Survey Tool | Offline Compatible</p>
         
-        <div class="instructions nepali-text">
-            <h3>📋 निर्देशनहरू (Instructions):</h3>
-            <ul>
-                <li>बीपी मनिटरको स्क्रिन सफा राख्नुहोस् (Keep BP monitor screen clean)</li>
-                <li>राम्रो प्रकाशमा फोटो लिनुहोस् (Take photo in good light)</li>
-                <li>नम्बरहरू स्पष्ट देखिनुपर्छ (Numbers must be clearly visible)</li>
-                <li>हृदय दर (पल्स) पनि क्याप्चर गर्नुहोस् (Capture heart rate/pulse too)</li>
-            </ul>
+        <div class="alert alert-info" id="info-box">
+            <strong>Tip:</strong> Ensure good lighting and hold phone steady. First OCR load may take 10-15 seconds.
         </div>
-
-        <div class="settings-section">
-            <div class="settings-title">
-                <span>⚙️</span>
-                <span class="nepali-text">सीमा मानहरू सेट गर्नुहोस् (Set Thresholds)</span>
-            </div>
-            <div class="threshold-inputs">
-                <div class="input-group">
-                    <label class="nepali-text">उच्च बीपी सिस्टोलिक (High BP Systolic)</label>
-                    <input type="number" id="highSys" value="140" min="90" max="200">
-                </div>
-                <div class="input-group">
-                    <label class="nepali-text">उच्च बीपी डाइस्टोलिक (High BP Diastolic)</label>
-                    <input type="number" id="highDia" value="90" min="60" max="130">
-                </div>
-                <div class="input-group">
-                    <label class="nepali-text">निम्न बीपी सिस्टोलिक (Low BP Systolic)</label>
-                    <input type="number" id="lowSys" value="90" min="70" max="120">
-                </div>
-                <div class="input-group">
-                    <label class="nepali-text">निम्न बीपी डाइस्टोलिक (Low BP Diastolic)</label>
-                    <input type="number" id="lowDia" value="60" min="40" max="80">
-                </div>
-            </div>
-        </div>
+        
+        <div class="alert alert-error" id="error-box"></div>
+        <div class="alert alert-success" id="success-box"></div>
 
         <div class="camera-section">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
-            <img id="captured-image" alt="Captured BP Monitor">
+            <img id="captured-image" alt="Captured">
             
             <div id="camera-controls">
                 <button class="btn" onclick="startCamera()">
-                    <span class="nepali-text">📷 क्यामेरा खोल्नुहोस्</span>
+                    📷 Open Camera
                 </button>
             </div>
             
             <div id="capture-controls" style="display: none;">
                 <button class="btn btn-success" onclick="capturePhoto()">
-                    <span class="nepali-text">📸 फोटो लिनुहोस्</span>
+                    📸 Take Photo
                 </button>
                 <button class="btn btn-secondary" onclick="stopCamera()">
-                    <span class="nepali-text">❌ बन्द गर्नुहोस्</span>
+                    ❌ Cancel
                 </button>
             </div>
             
             <div id="retake-controls" style="display: none;">
                 <button class="btn" onclick="retakePhoto()">
-                    <span class="nepali-text">🔄 पुनः लिनुहोस्</span>
+                    🔄 Retake
                 </button>
                 <button class="btn btn-success" onclick="processImage()" id="read-btn">
-                    <span class="nepali-text">✅ मान पढ्नुहोस्</span>
+                    ✅ Read BP Values
                 </button>
             </div>
             
-            <div class="error-message" id="error-message"></div>
-            <div class="debug-info" id="debug-info"></div>
-        </div>
-
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p class="nepali-text">छवि प्रशोधन गर्दै... (Processing image...)</p>
-            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">कृपया केही सेकन्ड पर्खनुहोस् (Please wait 5-10 seconds)</p>
-            <p style="font-size: 0.8em; color: #999; margin-top: 5px;">पहिलो पटक लोड हुँदा ढिलो हुन सक्छ (May be slow on first use)</p>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing... Please wait</p>
+                <p style="font-size: 0.8em; color: #666;">Loading OCR engine (one-time)</p>
+            </div>
+            
+            <div class="debug-box" id="debug-box"></div>
         </div>
 
         <div class="result-section" id="result-section">
-            <h3 style="text-align: center; margin-bottom: 15px; color: #2c3e50;" class="nepali-text">
-                📊 परिणाम (Results)
-            </h3>
+            <h3 style="text-align: center; margin-bottom: 15px;">📊 Results</h3>
             
             <div class="bp-display">
                 <div class="bp-box">
-                    <div class="bp-label nepali-text">सिस्टोलिक (SYS)</div>
+                    <div class="bp-label">SYS (mmHg)</div>
                     <div class="bp-value" id="sys-value">--</div>
                 </div>
                 <div class="bp-box">
-                    <div class="bp-label nepali-text">डाइस्टोलिक (DIA)</div>
+                    <div class="bp-label">DIA (mmHg)</div>
                     <div class="bp-value" id="dia-value">--</div>
                 </div>
                 <div class="bp-box">
-                    <div class="bp-label nepali-text">पल्स (PULSE)</div>
+                    <div class="bp-label">PULSE</div>
                     <div class="bp-value" id="pulse-value">--</div>
                 </div>
             </div>
 
-            <div class="status-box" id="status-box">
-                <span id="status-text"></span>
-            </div>
-
+            <div class="status-box" id="status-box"></div>
+            
             <div style="margin-top: 15px; text-align: center;">
-                <button class="btn" onclick="manualEntry()" style="background: #ed8936;">
-                    <span class="nepali-text">✏️ म्यानुअल रूपमा प्रविष्ट गर्नुहोस्</span>
+                <button class="btn" onclick="showManualEntry()" style="background: #e67e22;">
+                    ✏️ Manual Entry
                 </button>
                 <button class="btn btn-success" onclick="saveReading()">
-                    <span class="nepali-text">💾 सेभ गर्नुहोस्</span>
+                    💾 Save Record
                 </button>
             </div>
         </div>
 
-        <div class="history-section" id="history-section" style="display: none;">
-            <h3 style="margin-bottom: 15px; color: #2c3e50;" class="nepali-text">
-                📚 इतिहास (History)
-            </h3>
-            <div id="history-list"></div>
-            <button class="btn export-btn" onclick="exportData()">
-                <span class="nepali-text">📥 डाटा निर्यात गर्नुहोस् (Export CSV)</span>
+        <div class="manual-entry" id="manual-entry">
+            <h4>Manual BP Entry</h4>
+            <div class="input-row">
+                <input type="number" id="manual-sys" placeholder="Systolic (e.g. 120)">
+                <input type="number" id="manual-dia" placeholder="Diastolic (e.g. 80)">
+            </div>
+            <div class="input-row">
+                <input type="number" id="manual-pulse" placeholder="Pulse (optional)">
+            </div>
+            <button class="btn btn-success" onclick="submitManual()" style="width: 100%;">
+                Submit Values
             </button>
         </div>
     </div>
@@ -471,37 +359,51 @@
     <script>
         let stream = null;
         let currentImageData = null;
-        let readings = JSON.parse(localStorage.getItem('bpReadings') || '[]');
+        let worker = null;
         let isProcessing = false;
-        
-        // Initialize
-        updateHistoryDisplay();
-        
-        // Check if Tesseract is loaded
-        if (typeof Tesseract === 'undefined') {
-            showError('OCR library not loaded. Please check internet connection and refresh.');
+
+        // Initialize worker on page load
+        async function initWorker() {
+            try {
+                logDebug('Initializing Tesseract worker...');
+                // Tesseract v5 API: createWorker(language)
+                worker = await Tesseract.createWorker('eng');
+                logDebug('Worker ready!');
+                showSuccess('OCR engine loaded. Ready to scan.');
+            } catch (err) {
+                console.error('Worker init failed:', err);
+                showError('OCR failed to load. Check internet connection.');
+            }
         }
 
-        function showError(message) {
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
+        // Start worker initialization
+        initWorker();
+
+        function logDebug(msg) {
+            console.log(msg);
+            const debugBox = document.getElementById('debug-box');
+            debugBox.style.display = 'block';
+            debugBox.innerHTML += msg + '<br>';
         }
 
-        function showDebug(message) {
-            const debugDiv = document.getElementById('debug-info');
-            debugDiv.textContent = message;
-            debugDiv.style.display = 'block';
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            box.textContent = msg;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 5000);
+        }
+
+        function showSuccess(msg) {
+            const box = document.getElementById('success-box');
+            box.textContent = msg;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 3000);
         }
 
         async function startCamera() {
             try {
-                // Check if running on HTTPS or localhost (required for camera)
-                if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                    showError('Camera requires HTTPS. Please use https:// or localhost.');
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showError('Camera not supported in this browser');
                     return;
                 }
 
@@ -517,24 +419,19 @@
                 const video = document.getElementById('video');
                 video.srcObject = stream;
                 video.style.display = 'block';
+                
                 document.getElementById('camera-controls').style.display = 'none';
                 document.getElementById('capture-controls').style.display = 'block';
                 document.getElementById('captured-image').style.display = 'none';
-                document.getElementById('error-message').style.display = 'none';
+                document.getElementById('result-section').style.display = 'none';
                 
             } catch (err) {
                 console.error('Camera error:', err);
-                let errorMsg = 'क्यामेरा खोल्न समस्या भयो। (Error opening camera)';
-                
-                if (err.name === 'NotAllowedError') {
-                    errorMsg = 'क्यामेरा अनुमति अस्वीकृत। कृपया ब्राउजर सेटिङमा अनुमति दिनुहोस्। (Camera permission denied)';
-                } else if (err.name === 'NotFoundError') {
-                    errorMsg = 'कुनै क्यामेरा भेटिएन। (No camera found)';
-                } else if (err.name === 'NotReadableError') {
-                    errorMsg = 'क्यामेरा अरू एपले प्रयोग गरिरहेको छ। (Camera in use by another app)';
-                }
-                
-                showError(errorMsg);
+                let msg = 'Camera error: ';
+                if (err.name === 'NotAllowedError') msg += 'Permission denied';
+                else if (err.name === 'NotFoundError') msg += 'No camera found';
+                else msg += err.message;
+                showError(msg);
             }
         }
 
@@ -547,24 +444,23 @@
             document.getElementById('camera-controls').style.display = 'block';
             document.getElementById('capture-controls').style.display = 'none';
             document.getElementById('retake-controls').style.display = 'none';
-            document.getElementById('captured-image').style.display = 'none';
         }
 
         function capturePhoto() {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d');
             
-            if (!video.videoWidth || !video.videoHeight) {
-                showError('भिडियो तयार छैन। केही सेकन्ड पर्खनुहोस्। (Video not ready)');
+            if (!video.videoWidth) {
+                showError('Video not ready yet. Please wait.');
                 return;
             }
             
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0);
             
-            // Compress image for faster OCR
+            // Compress for mobile
             currentImageData = canvas.toDataURL('image/jpeg', 0.8);
             
             document.getElementById('captured-image').src = currentImageData;
@@ -579,13 +475,19 @@
         function retakePhoto() {
             document.getElementById('captured-image').style.display = 'none';
             document.getElementById('result-section').style.display = 'none';
-            document.getElementById('debug-info').style.display = 'none';
+            document.getElementById('debug-box').style.display = 'none';
+            document.getElementById('debug-box').innerHTML = '';
             startCamera();
         }
 
         async function processImage() {
             if (!currentImageData) {
-                showError('कुनै छवि छैन। (No image captured)');
+                showError('No image captured');
+                return;
+            }
+            
+            if (!worker) {
+                showError('OCR not loaded yet. Please wait or refresh.');
                 return;
             }
             
@@ -594,81 +496,50 @@
             
             const readBtn = document.getElementById('read-btn');
             readBtn.disabled = true;
-            
             document.getElementById('loading').style.display = 'block';
             document.getElementById('retake-controls').style.display = 'none';
-            document.getElementById('error-message').style.display = 'none';
             
             try {
-                showDebug('Loading OCR engine...');
+                logDebug('Starting OCR recognition...');
                 
-                // Initialize Tesseract worker
-                const worker = await Tesseract.createWorker();
-                
-                showDebug('Processing image...');
-                
+                // Tesseract v5 API
                 const result = await worker.recognize(currentImageData);
-                
-                showDebug('OCR Complete. Analyzing...');
-                
-                await worker.terminate();
-                
                 const text = result.data.text;
-                console.log('OCR Raw Result:', text);
-                showDebug('Raw text: ' + text.substring(0, 100));
                 
-                // Extract numbers - improved regex for BP monitors
-                // Look for 2-3 digit numbers
-                const numbers = text.match(/\b\d{2,3}\b/g);
+                logDebug('OCR Text: ' + text.replace(/\n/g, ' '));
                 
-                console.log('Extracted numbers:', numbers);
+                // Extract numbers
+                const numbers = text.match(/\d+/g);
+                logDebug('Found numbers: ' + (numbers ? numbers.join(', ') : 'none'));
                 
                 if (numbers && numbers.length >= 2) {
-                    // Convert to integers
-                    const nums = numbers.map(Number);
-                    
-                    // Sort descending (BP usually has SYS > DIA)
+                    const nums = numbers.map(Number).filter(n => n >= 40 && n <= 300);
                     nums.sort((a, b) => b - a);
                     
-                    // BP logic: SYS is usually highest, DIA is second highest
-                    // But we need to be smart - typical BP ranges
-                    let sys, dia, pulse;
-                    
-                    // Filter reasonable BP values (40-300 range)
-                    const validBP = nums.filter(n => n >= 40 && n <= 300);
-                    
-                    if (validBP.length >= 2) {
-                        sys = validBP[0];
-                        dia = validBP[1];
+                    if (nums.length >= 2) {
+                        const sys = nums[0];
+                        const dia = nums[1];
+                        const pulse = nums[2] || '--';
                         
-                        // Pulse is usually 40-200, often third number or different
-                        const possiblePulse = nums.find(n => n >= 40 && n <= 200 && n !== sys && n !== dia);
-                        pulse = possiblePulse || '--';
-                    } else {
-                        // Fallback to first two numbers
-                        sys = nums[0];
-                        dia = nums[1];
-                        pulse = nums[2] || '--';
-                    }
-                    
-                    // Validate BP relationship (SYS should be > DIA)
-                    if (sys <= dia) {
-                        // Might be wrong assignment, try to fix
-                        if (nums.length >= 3 && nums[0] > nums[2]) {
-                            sys = nums[0];
-                            dia = nums[2];
+                        // Validate BP logic
+                        if (sys > dia) {
+                            displayResults(sys, dia, pulse);
+                            showSuccess('BP values detected!');
+                        } else {
+                            throw new Error('Invalid BP values detected');
                         }
+                    } else {
+                        throw new Error('Could not find valid BP values');
                     }
-                    
-                    displayResults(sys, dia, pulse);
                 } else {
-                    throw new Error('मानहरू पहिचान गर्न सकिएन (Could not detect values)');
+                    throw new Error('No numbers found in image');
                 }
                 
             } catch (error) {
                 console.error('OCR Error:', error);
-                showError('त्रुटि: ' + error.message + '. म्यानुअल प्रविष्टि प्रयोग गर्नुहोस्।');
-                manualEntry();
+                logDebug('Error: ' + error.message);
+                showError('OCR failed: ' + error.message + '. Try manual entry.');
+                showManualEntry();
             } finally {
                 document.getElementById('loading').style.display = 'none';
                 readBtn.disabled = false;
@@ -682,134 +553,73 @@
             document.getElementById('pulse-value').textContent = pulse;
             
             const statusBox = document.getElementById('status-box');
-            const statusText = document.getElementById('status-text');
             
-            const highSys = parseInt(document.getElementById('highSys').value) || 140;
-            const highDia = parseInt(document.getElementById('highDia').value) || 90;
-            const lowSys = parseInt(document.getElementById('lowSys').value) || 90;
-            const lowDia = parseInt(document.getElementById('lowDia').value) || 60;
-            
-            let status = '';
-            let statusClass = '';
-            
-            if (sys >= highSys || dia >= highDia) {
-                status = '⚠️ उच्च रक्तचाप (High BP) - चिकित्सकलाई भेट्नुहोस्';
-                statusClass = 'status-high';
-            } else if (sys <= lowSys || dia <= lowDia) {
-                status = '⚠️ निम्न रक्तचाप (Low BP) - सावधानी अपनाउनुहोस्';
-                statusClass = 'status-low';
+            // Simple BP classification
+            if (sys >= 140 || dia >= 90) {
+                statusBox.className = 'status-box status-high';
+                statusBox.innerHTML = '⚠️ HIGH BP<br><small>Consult doctor</small>';
+            } else if (sys <= 90 || dia <= 60) {
+                statusBox.className = 'status-box status-low';
+                statusBox.innerHTML = '⚠️ LOW BP<br><small>Take caution</small>';
             } else {
-                status = '✅ सामान्य रक्तचाप (Normal BP)';
-                statusClass = 'status-normal';
+                statusBox.className = 'status-box status-normal';
+                statusBox.innerHTML = '✅ NORMAL BP';
             }
-            
-            statusText.textContent = status;
-            statusBox.className = 'status-box ' + statusClass;
             
             document.getElementById('result-section').style.display = 'block';
             document.getElementById('retake-controls').style.display = 'block';
         }
 
-        function manualEntry() {
-            const sys = prompt('सिस्टोलिक मान प्रविष्ट गर्नुहोस् (Enter Systolic):');
-            if (!sys) return;
+        function showManualEntry() {
+            document.getElementById('manual-entry').style.display = 'block';
+        }
+
+        function submitManual() {
+            const sys = parseInt(document.getElementById('manual-sys').value);
+            const dia = parseInt(document.getElementById('manual-dia').value);
+            const pulse = document.getElementById('manual-pulse').value || '--';
             
-            const dia = prompt('डाइस्टोलिक मान प्रविष्ट गर्नुहोस् (Enter Diastolic):');
-            if (!dia) return;
+            if (!sys || !dia) {
+                showError('Please enter both systolic and diastolic values');
+                return;
+            }
             
-            const pulse = prompt('पल्स मान प्रविष्ट गर्नुहोस् (Enter Pulse) - वैकल्पिक:');
+            displayResults(sys, dia, pulse);
+            document.getElementById('manual-entry').style.display = 'none';
             
-            displayResults(parseInt(sys), parseInt(dia), pulse || '--');
+            // Clear inputs
+            document.getElementById('manual-sys').value = '';
+            document.getElementById('manual-dia').value = '';
+            document.getElementById('manual-pulse').value = '';
         }
 
         function saveReading() {
             const sys = document.getElementById('sys-value').textContent;
             const dia = document.getElementById('dia-value').textContent;
             const pulse = document.getElementById('pulse-value').textContent;
-            const status = document.getElementById('status-text').textContent;
+            const status = document.getElementById('status-box').textContent;
             
             const reading = {
                 id: Date.now(),
-                date: new Date().toLocaleString('ne-NP'),
-                systolic: sys,
-                diastolic: dia,
-                pulse: pulse,
-                status: status,
-                timestamp: new Date().toISOString()
+                date: new Date().toLocaleString(),
+                sys, dia, pulse, status
             };
             
+            // Get existing readings
+            let readings = JSON.parse(localStorage.getItem('bpReadings') || '[]');
             readings.push(reading);
             localStorage.setItem('bpReadings', JSON.stringify(readings));
             
-            alert('सफलतापूर्वक सेभ गरियो! (Saved successfully!)');
-            updateHistoryDisplay();
+            showSuccess('Saved! Total records: ' + readings.length);
             
-            // Reset for next reading
-            document.getElementById('result-section').style.display = 'none';
-            document.getElementById('captured-image').style.display = 'none';
-            document.getElementById('camera-controls').style.display = 'block';
-            document.getElementById('retake-controls').style.display = 'none';
-            document.getElementById('debug-info').style.display = 'none';
-        }
-
-        function updateHistoryDisplay() {
-            const historyList = document.getElementById('history-list');
-            const historySection = document.getElementById('history-section');
-            
-            if (readings.length === 0) {
-                historySection.style.display = 'none';
-                return;
-            }
-            
-            historySection.style.display = 'block';
-            historyList.innerHTML = '';
-            
-            // Show last 10 readings in reverse order
-            [...readings].reverse().slice(0, 10).forEach(reading => {
-                const item = document.createElement('div');
-                item.className = 'history-item';
-                item.innerHTML = `
-                    <div>
-                        <strong>${reading.systolic}/${reading.diastolic}</strong> mmHg
-                        <span style="color: #666; margin-left: 10px;">Pulse: ${reading.pulse}</span>
-                        <div class="history-time">${reading.date}</div>
-                    </div>
-                    <button class="delete-btn" onclick="deleteReading(${reading.id})">Delete</button>
-                `;
-                historyList.appendChild(item);
-            });
-        }
-
-        function deleteReading(id) {
-            if (confirm('के तपाईं निश्चित हुनुहुन्छ? (Are you sure?)')) {
-                readings = readings.filter(r => r.id !== id);
-                localStorage.setItem('bpReadings', JSON.stringify(readings));
-                updateHistoryDisplay();
-            }
-        }
-
-        function exportData() {
-            if (readings.length === 0) {
-                alert('निर्यात गर्न कुनै डाटा छैन। (No data to export)');
-                return;
-            }
-            
-            let csv = 'Date,Systolic,Diastolic,Pulse,Status\n';
-            readings.forEach(r => {
-                csv += `"${r.date}","${r.systolic}","${r.diastolic}","${r.pulse}","${r.status}"\n`;
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `bp_survey_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            alert('CSV फाइल डाउनलोड गरियो! (CSV file downloaded!)');
+            // Reset
+            setTimeout(() => {
+                document.getElementById('result-section').style.display = 'none';
+                document.getElementById('captured-image').style.display = 'none';
+                document.getElementById('camera-controls').style.display = 'block';
+                document.getElementById('retake-controls').style.display = 'none';
+                document.getElementById('debug-box').style.display = 'none';
+            }, 1500);
         }
     </script>
 </body>
